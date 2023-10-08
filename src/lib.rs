@@ -1,105 +1,65 @@
-use pyo3::prelude::*;
-use rphonetic::{Encoder, Soundex, DoubleMetaphone, Nysiis, Metaphone};
+use pyo3::{prelude::*, exceptions::PyNotImplementedError};
+use rphonetic::{Encoder, Soundex, DoubleMetaphone, Nysiis, Metaphone, MatchRatingApproach, Caverphone1, Caverphone2, Phonex, Cologne};
+
+
+fn get_encoder(encoder: &str) -> Result<Box<dyn Encoder>, PyErr> {
+    match encoder {
+        "soundex" => Ok(Box::new(Soundex::default())),
+        "refined_soundex" => Ok(Box::new(Soundex::default())),
+        "metaphone" => Ok(Box::new(Metaphone::default())),
+        "double_metaphone" => Ok(Box::new(DoubleMetaphone::default())),
+        "nysiis" => Ok(Box::new(Nysiis::default())),
+        "match_rating" => Ok(Box::new(MatchRatingApproach)),
+        "caverphone_1" => Ok(Box::new(Caverphone1)),
+        "caverphone_2" => Ok(Box::new(Caverphone2)),
+        "phonex" => Ok(Box::new(Phonex::default())),
+        "cologne" => Ok(Box::new(Cologne)),
+        _ => Err(PyNotImplementedError::new_err("Encoder not implemented")),
+    }
+}
+
+#[pyfunction]
+fn get_encoders() -> PyResult<Vec<String>> {
+    let mut encoders: Vec<String> = Vec::new();
+    encoders.push("soundex".to_string());
+    encoders.push("refined_soundex".to_string());
+    encoders.push("metaphone".to_string());
+    encoders.push("double_metaphone".to_string());
+    encoders.push("nysiis".to_string());
+    encoders.push("match_rating".to_string());
+    encoders.push("caverphone_1".to_string());
+    encoders.push("caverphone_2".to_string());
+    encoders.push("phonex".to_string());
+    encoders.push("cologne".to_string());
+    Ok(encoders)
+}
 
 
 #[pyfunction]
 fn encode_words(words: Vec<&str>, encoder: &str) -> PyResult<Vec<String>> {
     let mut encoded_words: Vec<String> = Vec::new();
-    match encoder {
-        "soundex" => {
-            let soundex = Soundex::default();
-            for word in words {
-                encoded_words.push(soundex.encode(word));
-            }
-        }
-        "metaphone" => {
-            let metaphone = Metaphone::default();
-            for word in words {
-                encoded_words.push(metaphone.encode(word));
-            }
-        }
-        "double_metaphone" => {
-            let double_metaphone = DoubleMetaphone::default();
-            for word in words {
-                encoded_words.push(double_metaphone.encode(word));
-            }
-        }
-        "nysiis" => {
-            let nysiis = Nysiis::default();
-            for word in words {
-                encoded_words.push(nysiis.encode(word));
-            }
-        }
-        _ => {
-            let soundex = Soundex::default();
-            for word in words {
-                encoded_words.push(soundex.encode(word));
-            }
-        }
+    let encoder_klass = get_encoder(encoder)?;
+
+    for word in words {
+        encoded_words.push(encoder_klass.encode(word));
     }
+
     Ok(encoded_words)
 }
 
 #[pyfunction]
 fn encode_word(word: &str, encoder: &str) -> PyResult<String> {
-    match encoder {
-        "soundex" => {
-            let soundex = Soundex::default();
-            Ok(soundex.encode(word))
-        }
-        "metaphone" => {
-            let metaphone = Metaphone::default();
-            Ok(metaphone.encode(word))
-        }
-        "double_metaphone" => {
-            let double_metaphone = DoubleMetaphone::default();
-            Ok(double_metaphone.encode(word))
-        }
-        "nysiis" => {
-            let nysiis = Nysiis::default();
-            Ok(nysiis.encode(word))
-        }
-        _ => {
-            let soundex = Soundex::default();
-            Ok(soundex.encode(word))
-        }
-    }
-}
+    let encoder_klass = get_encoder(encoder)?;
 
+    Ok(encoder_klass.encode(word))
 
-#[pyfunction]
-fn encode_word_soundex(word: &str) -> PyResult<String> {
-    let soundex = Soundex::default();
-    Ok(soundex.encode(word))
-}
-
-#[pyfunction]
-fn encode_word_metaphone(word: &str) -> PyResult<String> {
-    let metaphone = Metaphone::default();
-    Ok(metaphone.encode(word))
-}
-
-
-#[pyfunction]
-fn encode_word_double_metaphone(word: &str) -> PyResult<String> {
-    let double_metaphone = DoubleMetaphone::default();
-    Ok(double_metaphone.encode(word))
-}
-
-#[pyfunction]
-fn encode_word_nysiis(word: &str) -> PyResult<String> {
-    let nysiis = Nysiis::default();
-    Ok(nysiis.encode(word))
 }
 
 /// A Python module implemented in Rust.
 #[pymodule]
 fn fast_phonetic(_py: Python, m: &PyModule) -> PyResult<()> {
+    m.add_function(wrap_pyfunction!(get_encoders, m)?)?;
     m.add_function(wrap_pyfunction!(encode_words, m)?)?;
     m.add_function(wrap_pyfunction!(encode_word, m)?)?;
-    m.add_function(wrap_pyfunction!(encode_word_soundex, m)?)?;
-    m.add_function(wrap_pyfunction!(encode_word_metaphone, m)?)?;
-    m.add_function(wrap_pyfunction!(encode_word_double_metaphone, m)?)?;
-    m.add_function(wrap_pyfunction!(encode_word_nysiis, m)?)?;
     Ok(())
 }
